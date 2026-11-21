@@ -1,0 +1,18 @@
+# PiglinGuard 設定
+# 只處理這些世界（主世界那一側）的傳送門
+worlds: [world]
+
+auto-detect:
+  # 自動偵測金磚場：周圍傳送門方塊夠多時才移除
+  enabled: true
+  # 水平半徑（方塊，Chebyshev 距離，整個世界高度）。實際以區塊為單位統計
+  radius: 24
+  # 門檻。原版單一傳送門最多 21x21 = 441 格，所以門檻要 > 441
+  threshold: 1000
+  # 只處理由傳送門生成（NETHER_PORTAL）的殭屍化豬布林
+  require-portal-spawn: true
+  # 傳送門數量快取的保險過期時間（分鐘）
+  cache-ttl-minutes: 10
+
+# 開啟後每次移除都會在後台記錄（世界、座標、原因）
+log-removals: false

@@ -1,0 +1,10 @@
+# PiglinGuard 區域
+# whitelist: 這些範圍內一律不處理
+# blacklist: 這些範圍內一律移除（不檢查密度）
+# 格式：
+#   <名稱>:
+#     world: world
+#     min: [x, y, z]
+#     max: [x, y, z]
+whitelist: {}
+blacklist: {}

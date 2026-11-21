@@ -1,0 +1,13 @@
+name: PiglinGuard
+version: '${version}'
+main: zip.tw527e.piglinguard.PiglinGuardPlugin
+api-version: '1.21'
+folia-supported: true
+description: Removes farm-pushed zombified piglins at the Overworld -> Nether portal.
+authors: [TW527E]
+libraries:
+  - org.jetbrains.kotlin:kotlin-stdlib:${kotlinVersion}
+permissions:
+  piglinguard.admin:
+    description: Use /piglinguard
+    default: op
