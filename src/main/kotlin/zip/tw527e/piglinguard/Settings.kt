@@ -1,6 +1,7 @@
 package zip.tw527e.piglinguard
 
 import org.bukkit.configuration.ConfigurationSection
+import org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason
 
 data class Settings(
     val worlds: Set<String> = setOf("world"),
@@ -8,10 +9,11 @@ data class Settings(
     val radius: Int = 24,
     val threshold: Int = 1000,
     val requirePortalSpawn: Boolean = true,
+    val farmSpawnReasons: Set<SpawnReason> = DEFAULT_FARM_SPAWN_REASONS,
     val cacheTtlMinutes: Int = 10,
     val logRemovals: Boolean = false,
 ) {
-    val autoDetect: AutoDetect get() = AutoDetect(autoDetectEnabled, requirePortalSpawn, threshold)
+    val autoDetect: AutoDetect get() = AutoDetect(autoDetectEnabled, requirePortalSpawn, threshold, farmSpawnReasons)
 
     companion object {
         val DEFAULT = Settings()
@@ -42,9 +44,29 @@ data class Settings(
                 radius = radius,
                 threshold = threshold,
                 requirePortalSpawn = bool(cfg, "auto-detect.require-portal-spawn", d.requirePortalSpawn, warn),
+                farmSpawnReasons = spawnReasons(cfg, "auto-detect.farm-spawn-reasons", d.farmSpawnReasons, warn),
                 cacheTtlMinutes = int(cfg, "auto-detect.cache-ttl-minutes", d.cacheTtlMinutes, 1..1440, warn),
                 logRemovals = bool(cfg, "log-removals", d.logRemovals, warn),
             )
+        }
+
+        private fun spawnReasons(cfg: ConfigurationSection, path: String, def: Set<SpawnReason>, warn: (String) -> Unit): Set<SpawnReason> {
+            if (!cfg.contains(path)) return def
+            if (!cfg.isList(path)) {
+                warn("$path 必須是清單，改用預設值 ${def.joinToString()}")
+                return def
+            }
+            val out = linkedSetOf<SpawnReason>()
+            for (raw in cfg.getList(path)!!) {
+                val name = raw?.toString()?.trim()?.uppercase().orEmpty()
+                val reason = SpawnReason.entries.firstOrNull { it.name == name }
+                if (reason == null) warn("$path：不認識的生成原因 $raw，已略過") else out += reason
+            }
+            if (out.isEmpty()) {
+                warn("$path 是空的，改用預設值 ${def.joinToString()}")
+                return def
+            }
+            return out
         }
 
         private fun bool(cfg: ConfigurationSection, path: String, def: Boolean, warn: (String) -> Unit): Boolean {

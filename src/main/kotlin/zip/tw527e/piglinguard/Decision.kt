@@ -14,7 +14,7 @@ enum class Decision(val remove: Boolean, val reason: String) {
     IGNORE_WHITELIST(false, "在白名單區域內"),
     REMOVE_BLACKLIST(true, "在黑名單區域內"),
     IGNORE_AUTO_DISABLED(false, "自動偵測已關閉"),
-    IGNORE_NOT_PORTAL_SPAWN(false, "不是傳送門生成的"),
+    IGNORE_NOT_PORTAL_SPAWN(false, "生成原因不在 farm-spawn-reasons 裡"),
     IGNORE_LOW_DENSITY(false, "附近傳送門方塊數量未達門檻"),
     REMOVE_AUTO(true, "自動偵測：附近傳送門方塊數量達到門檻"),
 }
@@ -37,7 +37,15 @@ data class AutoDetect(
     val enabled: Boolean,
     val requirePortalSpawn: Boolean,
     val threshold: Int,
+    /** Spawn reasons that count as "made by the farm" when [requirePortalSpawn] is on. */
+    val farmSpawnReasons: Set<SpawnReason> = DEFAULT_FARM_SPAWN_REASONS,
 )
+
+/**
+ * Portal-spawned piglins, plus the reinforcements a zombified piglin can call in when it is hit
+ * (Zombie reinforcement logic), which farms produce while killing them.
+ */
+val DEFAULT_FARM_SPAWN_REASONS: Set<SpawnReason> = setOf(SpawnReason.NETHER_PORTAL, SpawnReason.REINFORCEMENTS)
 
 /**
  * The whole decision, first match wins. Pure: [density] is only called when the auto-detect
@@ -57,7 +65,7 @@ fun decide(facts: PortalFacts, auto: AutoDetect, density: () -> Long): Decision 
     if (facts.inBlacklist) return Decision.REMOVE_BLACKLIST
 
     if (!auto.enabled) return Decision.IGNORE_AUTO_DISABLED
-    if (auto.requirePortalSpawn && facts.spawnReason != SpawnReason.NETHER_PORTAL) {
+    if (auto.requirePortalSpawn && facts.spawnReason !in auto.farmSpawnReasons) {
         return Decision.IGNORE_NOT_PORTAL_SPAWN
     }
     return if (density() >= auto.threshold) Decision.REMOVE_AUTO else Decision.IGNORE_LOW_DENSITY

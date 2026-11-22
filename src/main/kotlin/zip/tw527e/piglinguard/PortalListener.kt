@@ -25,7 +25,7 @@ class PortalListener(private val plugin: PiglinGuardPlugin) : Listener {
             ?: if (e.portalType == PortalType.NETHER && world.environment == World.Environment.NORMAL) World.Environment.NETHER else null
 
         val decision = evaluate(plugin, entity, from, world, toEnv)
-        plugin.stats.record(decision, world.name, from.blockX, from.blockZ)
+        plugin.stats.record(decision, world.name, from.blockX, from.blockZ, entity.entitySpawnReason?.name)
         if (!decision.remove) return
 
         e.isCancelled = true

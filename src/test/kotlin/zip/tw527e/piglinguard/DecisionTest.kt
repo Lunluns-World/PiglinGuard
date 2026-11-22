@@ -98,9 +98,23 @@ class DecisionTest {
     }
 
     @ParameterizedTest
-    @EnumSource(SpawnReason::class, names = ["NETHER_PORTAL"], mode = EnumSource.Mode.EXCLUDE)
+    @EnumSource(SpawnReason::class, names = ["NETHER_PORTAL", "REINFORCEMENTS"], mode = EnumSource.Mode.EXCLUDE)
     fun notPortalSpawn(reason: SpawnReason) {
         assertEquals(Decision.IGNORE_NOT_PORTAL_SPAWN, decide(farm.copy(spawnReason = reason), auto, ::failDensity))
+    }
+
+    @Test
+    fun reinforcementsCountAsFarmSpawnByDefault() {
+        assertEquals(Decision.REMOVE_AUTO, decide(farm.copy(spawnReason = SpawnReason.REINFORCEMENTS), auto, dense))
+    }
+
+    @Test
+    fun farmSpawnReasonsAreConfigurable() {
+        val onlyPortal = auto.copy(farmSpawnReasons = setOf(SpawnReason.NETHER_PORTAL))
+        assertEquals(Decision.IGNORE_NOT_PORTAL_SPAWN, decide(farm.copy(spawnReason = SpawnReason.REINFORCEMENTS), onlyPortal, ::failDensity))
+        val withDefault = auto.copy(farmSpawnReasons = setOf(SpawnReason.DEFAULT))
+        assertEquals(Decision.REMOVE_AUTO, decide(farm.copy(spawnReason = SpawnReason.DEFAULT), withDefault, dense))
+        assertEquals(Decision.IGNORE_NOT_PORTAL_SPAWN, decide(farm, withDefault, ::failDensity))
     }
 
     @Test

@@ -9,8 +9,12 @@ auto-detect:
   radius: 24
   # 門檻。原版單一傳送門最多 21x21 = 441 格，所以門檻要 > 441
   threshold: 1000
-  # 只處理由傳送門生成（NETHER_PORTAL）的殭屍化豬布林
+  # 只處理生成原因在 farm-spawn-reasons 裡的殭屍化豬布林
   require-portal-spawn: true
+  # 算作「金磚場產生的」生成原因：
+  #   NETHER_PORTAL  = 從傳送門方塊生成
+  #   REINFORCEMENTS = 豬布林被打時叫來的援軍（金磚場殺豬布林時會產生）
+  farm-spawn-reasons: [NETHER_PORTAL, REINFORCEMENTS]
   # 傳送門數量快取的保險過期時間（分鐘）
   cache-ttl-minutes: 10
 

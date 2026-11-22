@@ -1,6 +1,7 @@
 package zip.tw527e.piglinguard
 
 import org.bukkit.configuration.file.YamlConfiguration
+import org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -32,11 +33,23 @@ class SettingsAndChunkTest {
         val (s, w) = parse(
             """
             worlds: [world, farmworld]
-            auto-detect: { enabled: false, radius: 32, threshold: 2000, require-portal-spawn: false, cache-ttl-minutes: 5 }
+            auto-detect: { enabled: false, radius: 32, threshold: 2000, require-portal-spawn: false, farm-spawn-reasons: [nether_portal, DEFAULT], cache-ttl-minutes: 5 }
             log-removals: true
             """.trimIndent(),
         )
-        assertEquals(Settings(setOf("world", "farmworld"), false, 32, 2000, false, 5, true), s)
+        assertEquals(
+            Settings(
+                worlds = setOf("world", "farmworld"),
+                autoDetectEnabled = false,
+                radius = 32,
+                threshold = 2000,
+                requirePortalSpawn = false,
+                farmSpawnReasons = setOf(SpawnReason.NETHER_PORTAL, SpawnReason.DEFAULT),
+                cacheTtlMinutes = 5,
+                logRemovals = true,
+            ),
+            s,
+        )
         assertTrue(w.isEmpty())
     }
 
@@ -45,12 +58,22 @@ class SettingsAndChunkTest {
         val (s, w) = parse(
             """
             worlds: world
-            auto-detect: { enabled: maybe, radius: -1, threshold: lots, require-portal-spawn: 3, cache-ttl-minutes: 0 }
+            auto-detect: { enabled: maybe, radius: -1, threshold: lots, require-portal-spawn: 3, farm-spawn-reasons: PORTAL, cache-ttl-minutes: 0 }
             log-removals: yesplease
             """.trimIndent(),
         )
         assertEquals(Settings.DEFAULT, s)
-        assertEquals(7, w.size)
+        assertEquals(8, w.size)
+    }
+
+    @Test
+    fun unknownSpawnReasonsAreSkipped() {
+        val (s, w) = parse("auto-detect: { farm-spawn-reasons: [NETHER_PORTAL, NOT_A_REASON] }")
+        assertEquals(setOf(SpawnReason.NETHER_PORTAL), s.farmSpawnReasons)
+        assertEquals(1, w.size)
+        val (s2, w2) = parse("auto-detect: { farm-spawn-reasons: [NOPE] }")
+        assertEquals(DEFAULT_FARM_SPAWN_REASONS, s2.farmSpawnReasons)
+        assertEquals(2, w2.size)
     }
 
     @Test
@@ -97,6 +120,10 @@ class SettingsAndChunkTest {
         assertEquals(3, st.count(Decision.REMOVE_AUTO))
         assertEquals(1, st.count(Decision.REMOVE_BLACKLIST))
         assertEquals(1, st.count(Decision.IGNORE_WHITELIST))
+        st.record(Decision.IGNORE_NOT_PORTAL_SPAWN, "world", 0, 0, "DEFAULT")
+        st.record(Decision.IGNORE_NOT_PORTAL_SPAWN, "world", 0, 0, "DEFAULT")
+        st.record(Decision.IGNORE_NOT_PORTAL_SPAWN, "world", 0, 0, null)
+        assertEquals(listOf("DEFAULT" to 2L, "UNKNOWN" to 1L), st.notPortalSpawnReasons())
         val top = st.topRemovalChunks(5)
         assertEquals(listOf(ChunkLocation("world", 0, 0) to 3L, ChunkLocation("world", 6, 6) to 1L), top)
     }

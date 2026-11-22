@@ -38,7 +38,7 @@ class PiglinGuardCommands(private val plugin: PiglinGuardPlugin) {
 
     private fun areaBranch(kind: AreaKind): LiteralArgumentBuilder<CommandSourceStack> =
         Commands.literal(kind.command)
-            .executes(::help)
+            .executes { areaHelp(it, kind) }
             .then(Commands.literal("pos1").executes { setCorner(it, 1) })
             .then(Commands.literal("pos2").executes { setCorner(it, 2) })
             .then(
@@ -70,19 +70,29 @@ class PiglinGuardCommands(private val plugin: PiglinGuardPlugin) {
         return p
     }
 
+    /** `/pg`: overview. Each line can be clicked to put the command in the chat box. */
     private fun help(ctx: CommandContext<CommandSourceStack>): Int {
         val s = ctx.source.sender
-        Msg.send(s, "<light_purple>(｡･ω･｡)ﾉ 指令列表")
-        listOf(
-            "/pg wl|bl add <名稱> <半徑>" to "以腳下為中心建立區域（全高度）",
-            "/pg wl|bl pos1|pos2" to "記錄角落",
-            "/pg wl|bl add <名稱>" to "用 pos1、pos2 建立區域",
-            "/pg wl|bl remove <名稱>" to "刪除區域",
-            "/pg list" to "列出所有區域",
-            "/pg scan" to "檢查目前位置",
-            "/pg stats" to "啟動以來的統計",
-            "/pg reload" to "重新載入設定",
-        ).forEach { (cmd, desc) -> Msg.line(s, " <gold><cmd></gold> <gray>- <desc>", "cmd" to cmd, "desc" to desc) }
+        Msg.send(s, "<light_purple>(｡･ω･｡)ﾉ 指令列表 <gray>（點一下指令就會填進聊天欄）")
+        Msg.command(s, "/pg wl", "/pg wl", "白名單指令（區域內一律不處理）")
+        Msg.command(s, "/pg bl", "/pg bl", "黑名單指令（區域內一律移除）")
+        Msg.command(s, "/pg list", "/pg list", "列出所有區域")
+        Msg.command(s, "/pg scan", "/pg scan", "檢查目前位置")
+        Msg.command(s, "/pg stats", "/pg stats", "啟動以來的統計")
+        Msg.command(s, "/pg reload", "/pg reload", "重新載入設定")
+        return Command.SINGLE_SUCCESS
+    }
+
+    /** `/pg wl` or `/pg bl`: the area commands of that list, spelled out. */
+    private fun areaHelp(ctx: CommandContext<CommandSourceStack>, kind: AreaKind): Int {
+        val s = ctx.source.sender
+        val c = "/pg ${kind.command}"
+        Msg.send(s, "<light_purple>(｡･ω･｡)ﾉ ${kind.display}指令 <gray>（點一下指令就會填進聊天欄）")
+        Msg.command(s, "$c add <名稱> <半徑>", "$c add ", "以腳下為中心建立區域（全高度）")
+        Msg.command(s, "$c pos1", "$c pos1", "把腳下記為第一個角落")
+        Msg.command(s, "$c pos2", "$c pos2", "把腳下記為第二個角落")
+        Msg.command(s, "$c add <名稱>", "$c add ", "用 pos1、pos2 圍出區域")
+        Msg.command(s, "$c remove <名稱>", "$c remove ", "刪除${kind.display}區域")
         return Command.SINGLE_SUCCESS
     }
 
@@ -237,6 +247,21 @@ class PiglinGuardCommands(private val plugin: PiglinGuardPlugin) {
         Msg.line(s, " <red>黑名單移除</red>：<gold><n>", "n" to st.count(Decision.REMOVE_BLACKLIST))
         Msg.line(s, " <red>自動偵測移除</red>：<gold><n>", "n" to st.count(Decision.REMOVE_AUTO))
         Msg.line(s, " <green>白名單放行</green>：<gold><n>", "n" to st.count(Decision.IGNORE_WHITELIST))
+        // Every other reason that occurred, so "nothing removed" can be explained.
+        val others = Decision.entries
+            .filter { it !in setOf(Decision.REMOVE_BLACKLIST, Decision.REMOVE_AUTO, Decision.IGNORE_WHITELIST) }
+            .map { it to st.count(it) }
+            .filter { it.second > 0 }
+        val seen = Decision.entries.sumOf { st.count(it) }
+        Msg.line(s, " 穿過傳送門的殭屍化豬布林（總數）：<gold><n>", "n" to seen)
+        if (others.isEmpty()) {
+            Msg.line(s, "   <gray>（沒有其他原因的紀錄）")
+        } else {
+            others.forEach { (d, n) -> Msg.line(s, "   <gray>不處理：<reason> × <n>", "reason" to d.reason, "n" to n) }
+            st.notPortalSpawnReasons().forEach { (r, n) ->
+                Msg.line(s, "     <dark_gray>生成原因 <aqua><r></aqua> × <n>", "r" to r, "n" to n)
+            }
+        }
         Msg.line(s, " <gray>快取中的區塊：<n>", "n" to plugin.densityCache.size)
         val top = st.topRemovalChunks(5)
         Msg.line(s, " 移除最多的區塊（前 5）：")
