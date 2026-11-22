@@ -117,3 +117,14 @@ blacklist:
 ./gradlew build      # 編譯並執行單元測試
 ./gradlew runServer  # 用 run-paper 啟動 Paper 1.21.8 測試伺服器（第一次需在 run/eula.txt 同意 EULA）
 ```
+
+### 自動建置與發布
+
+- 推到 `main` 或開 PR 時，GitHub Actions 會自動建置並跑測試，jar 可以在該次執行的 Artifacts 下載。
+- 要發布新版本：先把 `build.gradle.kts` 的 `version` 改成新版本並推上去，再推一個同名的 tag，例如：
+
+  ```bash
+  git tag v1.0.1 && git push origin v1.0.1
+  ```
+
+  Actions 會建置後建立 GitHub Release，並附上 jar。tag 和 `version` 不一致時會直接失敗，不會發布。
